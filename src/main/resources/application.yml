@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        show_sql: true #띄어쓰기 8칸
+        format_sql: true
+        default_batch_fetch_size: 100
