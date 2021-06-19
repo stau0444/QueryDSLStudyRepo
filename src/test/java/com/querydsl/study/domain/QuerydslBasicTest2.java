@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -471,4 +472,56 @@ public class QuerydslBasicTest2 {
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 
+    //벌크연산은 영속성컨텍스트를 무시하고 바로 DB로 쿼리를 날린다
+    //벌크연산후 해당 데이터를 조회하여 DB에서 데이터 퍼온다고 해도
+    //영속성컨텍스트의 데이터가 우선되기 떄문에 영속성컨텍스트의 데이터가 리턴된다.
+    //업데이트 후에 영속성 컨텍스트 초기화가 필요하다
+    @Test
+    public void bulk_update(){
+        long count = qf
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(20))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+
+        List<Member> fetch = qf.selectFrom(member).fetch();
+        for (Member member : fetch) {
+            System.out.println("member = " + member);
+        }
+    }
+
+    @Test
+    public void bulkAdd(){
+        long execute = qf
+                .update(member)
+                //add , minus , multiple 다 가능하다.
+                .set(member.age, member.age.add(1))
+                .execute();
+        em.clear();
+        em.flush();
+
+        List<Member> fetch = qf.selectFrom(member).fetch();
+        for (Member member : fetch) {
+            System.out.println("member = " + member);
+        }
+    }
+    
+    @Test
+    void bulk_delete(){
+        long execute = qf
+                .delete(member)
+                .execute();
+        em.clear();
+        em.flush();
+
+        List<Member> fetch = qf.selectFrom(member).fetch();
+        for (Member member : fetch) {
+            System.out.println("member = " + member);
+        }
+    
+    }
 }
