@@ -1,15 +1,20 @@
 package com.querydsl.study.dto;
 
+import com.querydsl.core.annotations.QueryProjection;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter @Setter
+@Data
+@NoArgsConstructor
 public class MemberDto {
 
     private String username;
-    private String age;
+    private int age;
 
-    public MemberDto(String username, String age) {
+    @QueryProjection
+    public MemberDto(String username, int age) {
         this.username = username;
         this.age = age;
     }

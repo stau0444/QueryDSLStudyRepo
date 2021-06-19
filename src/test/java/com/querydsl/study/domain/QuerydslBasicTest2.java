@@ -1,12 +1,19 @@
 package com.querydsl.study.domain;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.study.dto.MemberDto;
+import com.querydsl.study.dto.QMemberDto;
+import com.querydsl.study.dto.UserDto;
 import org.assertj.core.api.Assertions;
+import org.h2.engine.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -294,6 +301,137 @@ public class QuerydslBasicTest2 {
             System.out.println("name = " + name);
             System.out.println("age = " + age);
         }
+    }
+
+
+    //순수 JPA에서 DTO 조회
+    //생성자로만 가능
+    //지저분함
+    @Test
+    public void findDtoByJPQL(){
+        List<MemberDto> resultList = em.createQuery(
+                "select new com.querydsl.study.dto.MemberDto(m.username,m.age)" +
+                        " from Member m"
+                , MemberDto.class).getResultList();
+
+        for (MemberDto memberDto : resultList) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+
+    //setter 를 통해서 값이 들어 감
+    @Test
+    public void findDtoByQuerydsl(){
+        List<MemberDto> fetch = qf.select(Projections.bean(MemberDto.class,
+                member.username,
+                member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : fetch) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    //필드에 직접 값이 들어감
+    @Test
+    public void findDtoByField(){
+        List<MemberDto> fetch = qf.select(Projections.fields(MemberDto.class,
+                member.username,
+                member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : fetch) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    //생성자로 들어감
+    //생성자에서 필드의 타입을 보고 들어가기 떄문에
+    //런타임시에 오류가 난다 .
+    @Test
+    public void findDtoByConstructor(){
+        List<UserDto> fetch = qf.select(Projections.constructor(UserDto.class,
+                member.username,
+                member.age))
+                .from(member)
+                .fetch();
+
+        for (UserDto userDto : fetch) {
+            System.out.println("userDto = " + userDto);
+        }
+    }
+
+
+    //필드명이 맞지 않은 상태일때
+    //as() 로 별칭을줘서 Dto의 필드와 맞춰 준다 .
+    //ExpressionUtils로 서브쿼리에 별칭을 Dto 필드로 맞춰서 서브쿼리 결과 값을 넣어줄 수 있다 .
+    @Test
+    public void findUserDtoByField(){
+        QMember memberSub = new QMember("memberSub");
+        List<UserDto> result = qf.select(Projections.fields(UserDto.class,
+                member.username.as("name"),
+                //서브쿼리의 결과가 age라는 별칭으로 UserDto에 들어간다
+                ExpressionUtils.as(
+                        JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub),"age")))
+                .from(member)
+                .fetch();
+
+        for (UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
+        }
+    }
+
+    //QueryProjection을 사용하여 Dto 조회
+    //Dto생성자에 @QueryProjection을 달아주고 compilequeryDsl을 해주면
+    //Q-type의 Dto를 만들어준다 .
+    //Dto를 Q타입 객체로 만들기 때문에 아래와같이 바로 사용이 가능하고
+    //생성자에 타입이 안맞을 경우 컴파일 시점에 잡아준다 .
+    //반환타입은 Q타입이 아닌 원래 Dto로 반환된다 신기하다.
+
+    //단점은 Dto가 쿼리dsl에 의존성을 갖게 된다.
+    //여러 레이어에서 사용되는 Dto의 특성상
+    //의존관계가 역전될 수도 잇는 단점이 있다 .
+    @Test
+    void queryProjection(){
+        List<MemberDto> result = qf.select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+    @Test
+    public void dynamicQuery_BooleanBuilder(){
+        String usernameParam = "member1";
+        Integer ageParam = 10 ;
+
+        List<Member> result = searchMember1(usernameParam,ageParam);
+        assertThat(result.size()).isEqualTo(1);
+
+
+    }
+
+    private List<Member> searchMember1(String usernameParam, Integer ageParam) {
+
+        BooleanBuilder builder = new BooleanBuilder();
+        if(usernameParam != null){
+            builder.and(member.username.eq((usernameParam)));
+        }
+
+        if(ageParam != null){
+            builder.and(member.age.eq((ageParam)));
+        }
+
+
+       return qf
+                .selectFrom(member)
+                .where(builder)
+                .fetch();
     }
 
 
