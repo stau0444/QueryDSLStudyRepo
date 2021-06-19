@@ -23,6 +23,7 @@ import static com.querydsl.study.domain.QMember.*;
 import static com.querydsl.study.domain.QMember.member;
 import static com.querydsl.study.domain.QTeam.team;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Transactional
@@ -218,5 +219,34 @@ public class QuerydslBasicTest {
 
         assertEquals(teamA.get(team.name),"teamA");
         assertEquals(teamA.get(member.age.avg()),10.5f);
+    }
+
+    @Test
+    void join(){
+        List<Member> teamA = qf
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        assertEquals(teamA.size(),2);
+        org.assertj.core.api.Assertions.assertThat(teamA).extracting("username").containsExactly("member1","member2");
+        assertTrue(teamA.get(0).getUsername().equals("member1"));
+    }
+
+    @Test
+    void theta_join(){
+        //사람이름이 팀이름과 같은 회원 조회
+
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        List<Member> result = qf.select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+
+        assertEquals(result.get(0).getUsername(),"teamA");
+
     }
 }
