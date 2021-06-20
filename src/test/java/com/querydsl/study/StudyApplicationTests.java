@@ -3,7 +3,9 @@ package com.querydsl.study;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.querydsl.study.domain.Member;
 import com.querydsl.study.domain.QMember;
+import com.querydsl.study.domain.Team;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,8 +18,12 @@ import javax.persistence.EntityManager;
 @Transactional
 class StudyApplicationTests {
 
+
     @Autowired
     EntityManager em;
+
+
+
 
     @Test
     @Rollback(false)
@@ -34,5 +40,6 @@ class StudyApplicationTests {
 
         Assertions.assertThat(member1).isEqualTo(member);
     }
+
 
 }
